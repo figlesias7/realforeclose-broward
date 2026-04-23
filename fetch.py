@@ -26,6 +26,10 @@ def clean_text(value: str) -> str:
     return " ".join(str(value).replace("\xa0", " ").split())
 
 
+def html_nowrap(value: str) -> str:
+    return escape(value).replace(" ", "&nbsp;")
+
+
 def load_seen() -> set[str]:
     if not os.path.exists(SEEN_FILE):
         return set()
@@ -194,13 +198,13 @@ def build_html(index_files: list[str]) -> None:
             body_rows = "\n".join(
                 f"""
                 <tr>
-                  <td>{escape(r.get("Auction Date", ""))}</td>
+                  <td><span class="nowrap">{html_nowrap(r.get("Auction Date", ""))}</span></td>
                   <td>{escape(r.get("Property Address", ""))}</td>
                   <td>{escape(r.get("Final Judgment", ""))}</td>
                   <td>{escape(r.get("Assessed Value", ""))}</td>
                   <td>{escape(r.get("Plaintiff Max Bid", ""))}</td>
-                  <td><a href="{escape(r.get("Case Link", ""))}" target="_blank">{escape(r.get("Case #", ""))}</a></td>
-                  <td><a href="{escape(r.get("Parcel Link", ""))}" target="_blank">{escape(r.get("Parcel ID", ""))}</a></td>
+                  <td><a href="{escape(r.get("Case Link", ""))}" target="_blank"><span class="nowrap">{html_nowrap(r.get("Case #", ""))}</span></a></td>
+                  <td><a href="{escape(r.get("Parcel Link", ""))}" target="_blank"><span class="nowrap">{html_nowrap(r.get("Parcel ID", ""))}</span></a></td>
                 </tr>
                 """
                 for r in rows
@@ -248,6 +252,7 @@ def build_html(index_files: list[str]) -> None:
     table {{ border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 28px; }}
     th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }}
     th {{ background: #f3f3f3; }}
+    .nowrap {{ white-space: nowrap; word-break: normal; overflow-wrap: normal; hyphens: none; display: inline-block; }}
   </style>
 </head>
 <body>

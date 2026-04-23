@@ -26,10 +26,6 @@ def clean_text(value: str) -> str:
     return " ".join(str(value).replace("\xa0", " ").split())
 
 
-def html_nowrap(value: str) -> str:
-    return escape(value).replace(" ", "&nbsp;")
-
-
 def load_seen() -> set[str]:
     if not os.path.exists(SEEN_FILE):
         return set()
@@ -88,13 +84,11 @@ def parse_waiting_records(section_text: str) -> list[dict]:
     if not section_text:
         return []
 
-    # Broward appears to omit "Assessed Value" on at least some auction cards.
-    # Make that whole block optional so parsing still succeeds.
     pattern = re.compile(
         r"Auction Starts\s*(?P<auction_date>\d{2}/\d{2}/\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s+ET).*?"
-        r"Case #:\s*(?P<case>.*?)\s*"
+        r"Case #:\s*(?P<case>\S+).*?"
         r"Final Judgment Amount:\s*(?P<judgment>\$[\d,]+\.\d{2}|Hidden).*?"
-        r"Parcel ID:\s*(?P<parcel>.*?)\s*"
+        r"Parcel ID:\s*(?P<parcel>\S+).*?"
         r"Property Address:\s*(?P<address>.*?)"
         r"(?:Assessed Value:\s*(?P<assessed>\$[\d,]+\.\d{2}|Hidden).*?)?"
         r"Plaintiff Max Bid:\s*(?P<max_bid>\$[\d,]+\.\d{2}|Hidden)",
@@ -123,13 +117,12 @@ def parse_waiting_records(section_text: str) -> list[dict]:
 
         case_no = clean_text(match.group("case"))
         parcel_id = clean_text(match.group("parcel"))
-        assessed_value = clean_text(match.group("assessed") or "")
 
         rows.append({
             "Auction Date": clean_text(match.group("auction_date")),
             "Property Address": address,
             "Final Judgment": clean_text(match.group("judgment")),
-            "Assessed Value": assessed_value,
+            "Assessed Value": clean_text(match.group("assessed") or ""),
             "Plaintiff Max Bid": clean_text(match.group("max_bid")),
             "Case #": case_no,
             "Parcel ID": parcel_id,
@@ -198,13 +191,13 @@ def build_html(index_files: list[str]) -> None:
             body_rows = "\n".join(
                 f"""
                 <tr>
-                  <td><span class="nowrap">{html_nowrap(r.get("Auction Date", ""))}</span></td>
+                  <td>{escape(r.get("Auction Date", ""))}</td>
                   <td>{escape(r.get("Property Address", ""))}</td>
                   <td>{escape(r.get("Final Judgment", ""))}</td>
                   <td>{escape(r.get("Assessed Value", ""))}</td>
                   <td>{escape(r.get("Plaintiff Max Bid", ""))}</td>
-                  <td><a href="{escape(r.get("Case Link", ""))}" target="_blank"><span class="nowrap">{html_nowrap(r.get("Case #", ""))}</span></a></td>
-                  <td><a href="{escape(r.get("Parcel Link", ""))}" target="_blank"><span class="nowrap">{html_nowrap(r.get("Parcel ID", ""))}</span></a></td>
+                  <td><a href="{escape(r.get("Case Link", ""))}" target="_blank">{escape(r.get("Case #", ""))}</a></td>
+                  <td><a href="{escape(r.get("Parcel Link", ""))}" target="_blank">{escape(r.get("Parcel ID", ""))}</a></td>
                 </tr>
                 """
                 for r in rows
@@ -250,9 +243,8 @@ def build_html(index_files: list[str]) -> None:
     a {{ color: #0645ad; text-decoration: none; }}
     a:hover {{ text-decoration: underline; }}
     table {{ border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 28px; }}
-    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }}
+    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; white-space: nowrap; }}
     th {{ background: #f3f3f3; }}
-    .nowrap {{ white-space: nowrap; word-break: normal; overflow-wrap: normal; hyphens: none; display: inline-block; }}
   </style>
 </head>
 <body>
